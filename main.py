@@ -9,8 +9,8 @@ now_datetime = datetime.strptime(now[:-7], '%Y-%m-%d %H:%M:%S')
 
 today_midnight = '2021-04-26 00:00:00.000000' ##2021-04-26 00:00:00.000000
 today_midnight_datetime = datetime.strptime(today_midnight[:-7], '%Y-%m-%d %H:%M:%S')
-file_path = f'/Users/dannis.tang/PycharmProjects/pythonProject/competition_ranking_{now}.csv'
-id_file_name = '/Users/dannis.tang/PycharmProjects/pythonProject/id_list.csv'
+file_path = f'competition_ranking_{now}.csv'
+id_file_name = 'id_list.csv'
 
 conn = psycopg2.connect(
     host="",
