@@ -22,14 +22,6 @@ cur = conn.cursor()
 
 id_source = pd.read_csv(id_file_name, header=0)
 id_list = [x for x in id_source['user_id']]
-# print(id_list)
-#
-# ## get day 0 mainwallet balance
-# sql='select "CID", "Amount" from (select row_number() over (partition by "CID" order by "DateTime" desc) as "num", * from "tbl_AccountMasters" where "Currency" = \'BTC\') source where source.num = 1 and source."CID" in %(idList)s'
-# cur.execute(sql, { 'idList': tuple(id_list), # Converts the list to a tuple.
-# })
-#
-# result_list = cur.fetchall()
 
 ##mark price
 cur.execute(f'select to_timestamp("TS"/1000),* from "tbl_MarkPrices" where "ContractName"= \'BTCUSD\' and to_timestamp("TS"/1000) = \'{today_midnight}\'')
@@ -85,8 +77,10 @@ for customer in customers_position_details:
     user_id = customer[-1]
     avg_entry_price = customer[-3]
     upnl_now = customer[0]
+    deposit = 0
     balance = 0
     turnover = 0
+    
     if len(customers_turnover) > 0:
         for individual_turnover in customers_turnover:
             if individual_turnover[0] == user_id:
@@ -96,10 +90,11 @@ for customer in customers_position_details:
         for x in customers_main_wallet_btc_balance:
             if x[2] == user_id:
                 balance = x[-2]
-    deposit = 0
-    for deposit_amount in customers_deposit:
-        if deposit_amount[0] == user_id:
-            deposit = deposit_amount[1]
+
+    if len(customers_deposit) > 0:
+        for deposit_amount in customers_deposit:
+            if deposit_amount[0] == user_id:
+                deposit = deposit_amount[1]
 
 
     if closed:
@@ -222,7 +217,8 @@ for customer in customers_position_details:
 df = pd.DataFrame(all_customers, columns=['user_id',
                                           'size',
                                           'avg_entry_price',
-                                          'mark_price', 'upnl',
+                                          'mark_price',
+                                          'upnl',
                                           'balance',
                                           'balace_plus_upnl_day0',
                                           'balace_plus_upnl_now',
