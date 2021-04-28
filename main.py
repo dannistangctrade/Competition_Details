@@ -7,8 +7,8 @@ from datetime import datetime
 now = str(datetime.now()) ##2021-04-26 01:59:00.000000
 now_datetime = datetime.strptime(now[:-7], '%Y-%m-%d %H:%M:%S')
 
-today_midnight = '2021-04-26 00:00:00.000000' ##2021-04-26 00:00:00.000000
-today_midnight_datetime = datetime.strptime(today_midnight[:-7], '%Y-%m-%d %H:%M:%S')
+day0_midnight = '2021-04-26 00:00:00.000000' ##2021-04-26 00:00:00.000000
+today0_midnight_datetime = datetime.strptime(day0_midnight[:-7], '%Y-%m-%d %H:%M:%S')
 file_path = f'competition_ranking_{now}.csv'
 id_file_name = 'id_list.csv'
 
@@ -24,7 +24,7 @@ id_source = pd.read_csv(id_file_name, header=0)
 id_list = [x for x in id_source['user_id']]
 
 ##mark price
-cur.execute(f'select to_timestamp("TS"/1000),* from "tbl_MarkPrices" where "ContractName"= \'BTCUSD\' and to_timestamp("TS"/1000) = \'{today_midnight}\'')
+cur.execute(f'select to_timestamp("TS"/1000),* from "tbl_MarkPrices" where "ContractName"= \'BTCUSD\' and to_timestamp("TS"/1000) = \'{day0_midnight}\'')
 mark_price_result = cur.fetchall()
 mark_price = mark_price_result[0][-1]
 print(f'mark_price_day0: {mark_price}')
@@ -37,7 +37,7 @@ print(f'mark_price_now: {mark_price_now}')
 
 
 ##Main Wallet
-sql = f'select * from (select row_number() over (partition by "CID" order by "DateTime" desc) "num", * from "tbl_AccountMasters" where "DateTime" <= \'{today_midnight}\' and  "Currency" = \'BTC\' and  "CID" in %(idList)s) wallet where wallet.num =1'
+sql = f'select * from (select row_number() over (partition by "CID" order by "DateTime" desc) "num", * from "tbl_AccountMasters" where "DateTime" <= \'{day0_midnight}\' and  "Currency" = \'BTC\' and  "CID" in %(idList)s) wallet where wallet.num =1'
 cur.execute(sql, { 'idList': tuple(id_list), # Converts the list to a tuple.
 })
 customers_main_wallet_btc_balance = cur.fetchall() ##-2 balance, 2 user_id
@@ -57,13 +57,13 @@ cur.execute(sql, { 'idList': tuple(id_list), # Converts the list to a tuple.
 customers_position_details = cur.fetchall()
 
 ##deposit after competition
-sql = f'select "UserID", sum("Amount") from (select "UserID", "Amount"  from "tbl_Crypto_Deposits" where "Ticker" = \'BTC\' and to_timestamp("ConfirmedOnTS"/1000) > \'{today_midnight}\' union all select "UserID", -1*"Amount" as "Amount" from "tbl_Crypto_Withdrawals" where "Ticker" = \'BTC\' and to_timestamp("ConfirmedOnTS"/1000) > \'{today_midnight}\')dw where "UserID" in %(idList)s group by "UserID"'
+sql = f'select "UserID", sum("Amount") from (select "UserID", "Amount"  from "tbl_Crypto_Deposits" where "Ticker" = \'BTC\' and to_timestamp("ConfirmedOnTS"/1000) > \'{day0_midnight}\' union all select "UserID", -1*"Amount" as "Amount" from "tbl_Crypto_Withdrawals" where "Ticker" = \'BTC\' and to_timestamp("ConfirmedOnTS"/1000) > \'{day0_midnight}\')dw where "UserID" in %(idList)s group by "UserID"'
 cur.execute(sql, { 'idList': tuple(id_list), # Converts the list to a tuple.
 })
 customers_deposit = cur.fetchall()
 
 ##turnover
-sql_for_turnover = f'select "ID", sum("Quantity") from (select "BuyerID" as "ID", sum("Quantity") "Quantity" from "tbl_Trades" where "BuyerID" in %(idList)s and "ContractName" = \'BTCUSD\' and to_timestamp("TradeTS") > \'{today_midnight}\' group by "BuyerID" union all select "SellerID" as "ID", sum("Quantity") "Quantity" from "tbl_Trades" where "SellerID" in  %(idList)s and "ContractName" = \'BTCUSD\' and to_timestamp("TradeTS") > \'{today_midnight}\' group by "SellerID") trade group by "ID"'
+sql_for_turnover = f'select "ID", sum("Quantity") from (select "BuyerID" as "ID", sum("Quantity") "Quantity" from "tbl_Trades" where "BuyerID" in %(idList)s and "ContractName" = \'BTCUSD\' and to_timestamp("TradeTS") > \'{day0_midnight}\' group by "BuyerID" union all select "SellerID" as "ID", sum("Quantity") "Quantity" from "tbl_Trades" where "SellerID" in  %(idList)s and "ContractName" = \'BTCUSD\' and to_timestamp("TradeTS") > \'{day0_midnight}\' group by "SellerID") trade group by "ID"'
 cur.execute(sql_for_turnover, { 'idList': tuple(id_list),
 })
 customers_turnover = cur.fetchall() ##0 id, 1 turnover
@@ -80,7 +80,7 @@ for customer in customers_position_details:
     deposit = 0
     balance = 0
     turnover = 0
-    
+
     if len(customers_turnover) > 0:
         for individual_turnover in customers_turnover:
             if individual_turnover[0] == user_id:
@@ -131,7 +131,7 @@ for customer in customers_position_details:
     balace_plus_upnl_now = balance_now + upnl_now
 
 ####################cases
-    if update_time < today_midnight_datetime:
+    if update_time < today0_midnight_datetime:
         if closed:
             size = 0
             upnl = customer[0]
@@ -159,14 +159,14 @@ for customer in customers_position_details:
 
     else:
         ##find position id of trade right after 00:00, 6 position_id
-        cur.execute(f'select to_timestamp("updatedAt"),"closed","orders",* from "tbl_Positions" where "symbol" = \'BTCUSD\' and user_id = \'{user_id}\' and to_timestamp("updatedAt") > \'{today_midnight}\' order by "updatedAt" asc limit 1;')
+        cur.execute(f'select to_timestamp("updatedAt"),"closed","orders",* from "tbl_Positions" where "symbol" = \'BTCUSD\' and user_id = \'{user_id}\' and to_timestamp("updatedAt") > \'{day0_midnight}\' order by "updatedAt" asc limit 1;')
         position_after_midnight = cur.fetchone()
         position_id = position_after_midnight[8]
         closed = position_after_midnight[1]
 
 
         ##find trades records after 00:00
-        cur.execute(f'select * from "tbl_Position_Trades" where "PositionID" = \'{position_id}\' and to_timestamp("HighResTradeTS"/1000000000) > \'{today_midnight}\' order by "HighResTradeTS" asc limit 1')
+        cur.execute(f'select * from "tbl_Position_Trades" where "PositionID" = \'{position_id}\' and to_timestamp("HighResTradeTS"/1000000000) > \'{day0_midnight}\' order by "HighResTradeTS" asc limit 1')
         trades_after_midnight = cur.fetchone()
         # print(f'id: {user_id}, updatetime: {update_time}')
         # print(f'trades_after_midnight: {trades_after_midnight}')
